@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmap-env-test
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  selector: 
+   matchLabels:
+     name: configmap-env-test
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: configmap-env-test
+    spec:
+      containers:
+        - name: env-test
+          image: busybox
+          command: [ "/bin/sh", "-c", "env;sleep 3600" ]
+          imagePullPolicy: IfNotPresent
+          env:  	# 定义环境变量
+          - name: APP_ENV_TEST_CM  	# 定义环境变量名
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-template-3  	# ConfigMap 的名字
+                key: APP_NAME  	# 表示从 name的ConfigMap中获取名字为Key 的value，将其赋值给容器内本地的环境变量 APP_ENV_TEST_CM
+          - name: JAVA_ENV_TEST_CM
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-template-3  	# ConfigMap 的名字
+                key: JAVA_OPTS_TEST  	# ConfigMap 的 key
+          volumeMounts:   # 加载数据卷
+          - name: passwd-config   # 表示加载 volumes 属性中那个数据卷
+            mountPath: "/opt/"    # 想要将数据卷中的文件加载到那个目录下
+            readOnly: true    # 是否只读
+      volumes: # 依数据卷方式挂载 ConfigMap Secret
+      - name: passwd-config   # 自定义名字
+        configMap:    # 数据卷类型为：ConfigMap
+          name: configmap-template-3    # ComfigMap 的名字，必须和加载的ConfigMap相同
+          items:    # 对 ConfigMap中的Key进行映射，如果不指定，默认会将ConfigMap中所有Key全部转换为一个个同名文件
+          - key: "password"   # ConfigMap中的Key
+            path: "password"    # 将该Key的值转换为文件  
+      restartPolicy: Always

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+ name: service-template
+ namespace: default
+spec:
+  selector:
+    name: statefulset-template
+  clusterIP: None  	# 将clusterIP设置为None，即可创建headliness Service
+  type: ClusterIP   # 类型：NodePort
+  ports:
+  - port: 80  	# Service的端口
+    protocol: TCP
+    targetPort: 80  	# StatefulSet 的Pod端口
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-template
+  namespace: default
+spec:
+  replicas: 3
+  serviceName: service-template   # 使用那个Service管理DNS
+  updateStrategy:
+    type: RollingUpdate  	# 滚动更新，OnDelete：删除更新
+    rollingUpdate:  	# 如果更新的策略是OnDelete，那么rollingUpdate就失效
+      partition: 2  	# 表示从第2个分区开始更新，默认是0
+  selector:
+    matchLabels:
+      name: statefulset-template
+  template:
+    metadata:
+      labels:
+        name: statefulset-template
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17.1
+        ports:
+        - containerPort: 80

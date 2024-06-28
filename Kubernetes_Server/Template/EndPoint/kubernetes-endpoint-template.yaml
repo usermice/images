@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: endpoints-template
+  namespace: default
+  labels:
+    name: nginx  	# 标签和Service 里的labels一致
+subsets:
+- addresses:
+  - ip: 23.41.187.94  	# 目标IP地址
+  ports:  	# 与 Service一致
+  - port: 80
+    protocol: TCP
+
+---
+
+apiVersion: v1          # 版本
+kind: Service   # 类型
+metadata:       # 元数据
+  name: service-template        # Service 名字
+  namespace: default    # 命名空间
+  labels:
+    name: nginx  	# Service 自己本身的标签
+spec:
+  type: ClusterIP        # 指定Service的类型访问方式、ClusterIP、NodePort、ExternalName
+  sessionAffinity: None  	# 分发策略、session亲和性，支持ClientIP、None两个选项，默认值为None
+  ports:        # 端口映射信息
+  - port: 80          # Service 端口，在使用内网IP访问时使用
+    protocol: TCP       # 协议
+    targetPort : 80     # 目标Pod端口，例如：deployment、statefulset等

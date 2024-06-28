@@ -1,0 +1,30 @@
+apiVersion: apps/v1  	# 版本号 
+kind: ReplicaSet  	# 类型 
+metadata:  	# 元数据 
+  name: replicaset-template  	# 名称、在一个名称空间内不能重复
+  namespace: default  	# 指定名称空间、默认defalut
+  labels:  	# 标签 
+    name: replicaset-template
+spec:  	# 详情描述 
+  replicas: 3  	# 指定副本数量，是rs创建出来的Pod的数量，默认为1.
+  selector:  	# 选择器，它的作用是建立Pod控制器和Pod之间的关联关系，采用了Label Selector机制（在Pod模块上定义Label，在控制器上定义选择器，就可以表明当前控制器能管理哪些Pod了）
+    matchLabels:  	# Labels匹配规则，matchExpressions：Expressions匹配规则
+      name: replicaset-template
+  template:  	# 模块 当副本数据不足的时候，会根据下面的模板创建Pod副本
+    metadata:
+      labels:
+        name: replicaset-template
+    spec:
+      containers:
+      - name: nginx  	# 容器名称
+        image: nginx:1.17.1  	# 容器需要的镜像地址
+        ports:
+        - containerPort: 80  	# 容器所监听的端口
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi

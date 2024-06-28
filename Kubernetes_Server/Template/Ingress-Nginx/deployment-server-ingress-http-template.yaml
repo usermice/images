@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: default
+  labels:
+    name: nginx-ingress
+spec:
+  replicas: 3
+  selector:  # 选择器，用于确定当前Service代理那些Pod
+    matchLabels:
+      name: nginx-ingress
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17.1
+        ports:
+        - containerPort: 80
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tomcat-deployment
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      name: tomcat-ingress
+  template:
+    metadata:
+      labels:
+        name: tomcat-ingress
+    spec:
+      containers:
+      - name: tomcat
+        image: tomcat:8.5-jre10-slim
+        ports:
+        - containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: default
+spec:
+  selector:
+    name: nginx-ingress
+  clusterIP: None
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-service
+  namespace: default
+spec:
+  selector:
+    name: tomcat-ingress
+  clusterIP: None
+  type: ClusterIP
+  ports:
+  - port: 80  # Service端口
+    targetPort: 8080  # Pod 使用端口
+
+--- 
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-http-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /   # 重写规则
+spec:
+  ingressClassName: nginx  	# Ingree类型：Nginx、Contour、Haproxy、Traefik
+  rules:
+  - host: nginx.erge.com  	# 定义域名使外网可以使用浏览器访问
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service  	# 代理那个名称的Service，和Service进行关联
+            port:
+              number: 80  # 代理Service端口，和Service进行关
+         
+  - host: tomcat.erge.com  	# 定义域名使外网可以使用浏览器访问
+    http:
+      paths:
+      - path: /
+        pathType: Prefix  	 # 定义域名后策略，或 / 或者 /api，Exact:精确匹配
+        backend:
+          service:
+            name: tomcat-service  # 代理那个名称的Service，和Service进行关联
+            port:
+              number: 8080  # 定义Server Pod端口为：ports: - port: 8080，和Service进行关联

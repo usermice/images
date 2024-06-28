@@ -1,0 +1,39 @@
+apiVersion: apps/v1   # 版本号
+kind: DaemonSet  	# 类型
+metadata:  	# 元数据
+  name: fluentd-daemonset  	# Pod 名称
+  namespace: default  	# 指定名称空间、默认default
+  labels:  	# 标签
+    name: 'fluentd-es'
+spec:  	# Pod 详情描述
+  revisionHistoryLimit: 3  	# 保留历史版本、默认为最大值(2^32)
+  updateStrategy:  	# 更新策略
+    type: RollingUpdate  	# 滚动更新策略
+    rollingUpdate:  	# 滚动更新
+      maxUnavailable: 1  	# 最大不可用状态的Pod的最大值，可用为百分比，也可以为整数
+  selector:  	# 选择器，通过它指定该控制器管理那些Pod
+    matchLabels:  	# Labels匹配规则，matchExpressions: 匹配规则
+      name: 'fluentd-es'
+  template:  	# 模板，当副本数量不足时，会根据下面的模板创建Pod模板
+    metadata:
+      labels:
+        name: 'fluentd-es'
+    spec:
+      containers:
+      - name: fluentd-es
+        image: agilestacks/fluentd-elasticsearch:v1.3.0
+        env:  	# 环境变量配置
+        - name: FLUENTD_ARGS  	# 环境变量的 key
+          value: -qq  	# 环境变量的 value
+        volumeMounts:  	# 加载数据卷 避免数据丢失
+        - name: containers  	# 数据卷名称
+          mountPath: /var/lib/docker/containers  	# 将数据卷挂载到容器内那个目录
+        - name: varlog
+          mountPath: /var/log
+      volumes:  	# 定义数据卷
+      - name: containers  	# 定义数据卷的名称
+        hostPath:  	# 数据卷类型，主机路径模式
+          path: /var/lib/docker/containers  	# node 中共享目录
+      - name: varlog
+        hostPath:
+          path: /var/log

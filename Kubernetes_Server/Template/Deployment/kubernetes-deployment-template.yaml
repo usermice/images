@@ -1,0 +1,61 @@
+apiVersion: apps/v1  	# 版本号 
+kind: Deployment  	# 类型 
+metadata:  	# 元数据 
+  name: deployment-template  	# deployment的名称
+  namespace: default  	# 指定名称空间、默认defalut
+  labels:  	# 标签 
+    name: deployment-nginx-template
+spec:  	# 详情描述 
+  replicas: 3  	# 副本数量 
+  revisionHistoryLimit: 3  	# 保留历史版本，默认为10 
+  paused: false  	# 暂停部署，默认是false 
+  progressDeadlineSeconds: 600  	# 部署超时时间（s），默认是600
+  strategy:  	# pod更新策略，即如何替换已有的pod
+    rollingUpdate:  	# 当type为RollingUpdate的时候生效，用于为rollingUpdate设置参数
+      maxUnavailable: 30%  	# 用来指定在升级过程中不可用的Pod的最大数量，默认为25%。
+      maxSurge: 30%  	# 用来指定在升级过程中可以超过期望的Pod的最大数量，默认为25%
+    type: RollingUpdate  	# 更新策略、支持 Recreate, RollingUpdate。默认RollingUpdate
+  selector:  	# 选择器，通过它指定该控制器管理哪些pod 
+    matchLabels:  	# Labels匹配规则，matchExpressions：Expressions匹配规则 
+      name: deployment-nginx-template 
+  template:  	# 模板，当副本数量不足时，会根据下面的模板创建pod副本 
+    metadata:
+      labels:   # Pod 的标签
+        name: deployment-nginx-template
+    spec:   # Pod 的期望信息
+      containers:   # Pod 容器描述
+      - name: nginx   # 镜像名称
+        image: nginx:1.17.1     # fxgxxxxx/nginx:v1 在所有节点登录自己的 hub.docker.com 账户
+        imagePullPolicy: IfNotPresent   # IfNotPresent：如果镜像不存在就拉取
+        ports:
+        - containerPort: 80
+        volumeMounts:   # 挂载到容器内部的存储卷配置
+        - name: nginx_vhosts    # 引用pod定义的共享存储卷的名称，需用volumes[]部分定义的的卷名
+          mountPath: /usr/local/nginx/conf/vhosts   # 存储卷在容器内mount的绝对路径，应少于512字符
+          name: nginx_logs
+          mountPath: /usr/local/nginx/logs
+          name: nginx_html
+        resources:      # 资源限制和请求的设置
+          limits:   # 限定Pod最大使用硬件资源、通常设置cpu和memory
+            cpu: "6"    # Cpu的限制，单位为core数，将用于docker run --cpu-shares参数，1000m等于一个核心
+            memory: "128Mi"     # 内存限制，单位可以为Mib/Gib，将用于docker run --memory参数
+          requests:     # 最低资源要求，在scheduler中被用到，通常设置cpu和memory
+            cpu: "3"    # 限定使用几个核心CPU、容器启动的初始可用数量
+            memory: "64Mi"      # 设定使用内存、容器启动的初始可用数量
+      restartPolicy: Always   # 重启策略，Always：代表一直重启
+      terminationGracePeriodSeconds: 30   # 删除操作宽限时间
+      volumes:      # 在该pod上定义共享存储卷列表
+      - name: nginx_vhosts     # 共享存储卷名称 （volumes类型有很多种） 
+        hostPath:   # 类型为hostPath的存储卷，表示挂载Pod所在宿主机的目录
+          path: /opt/data/nginx/vhosts
+          type: DirectoryOrCreate   # 目录存在就使用，不存在就先创建再使用
+        name: nginx_logs
+        hostPath:
+          path: /opt/data/nginx/logs
+          type: DirectoryOrCreate
+        name: nginx_html
+        hostPath:
+          path: /opt/data/nginx/html
+          type: DirectoryOrCreate
+
+status: {}

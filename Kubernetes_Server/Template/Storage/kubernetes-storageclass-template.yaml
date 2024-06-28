@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass    # 创建动态存储类
+metadata:
+  name: nfs-storage-template
+  namespace: default
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: fuseim.pri/ifs  	# 外部制备器提供者，编写为提供者的名称，k8s-sigs.io/nfs-subdir-external-provisioner
+allowVolumeExpansion: true  	# 动态调整持久卷大小
+parameters:  	# 
+  archiveOnDelete: "true"  	# 是否存档，false：表示不存档，会删除oldPath下面的数据，true：表示存档，会重命名路径
+reclaimPolicy: Retain  	# 回收策略，默认为：Delete，
+volumeBindingMode: Immediate  	# 默认为：Immediate，表示创建 PVC立即进行绑定，只有：azuredisk和：AWSelasticblockstore 支持其他值

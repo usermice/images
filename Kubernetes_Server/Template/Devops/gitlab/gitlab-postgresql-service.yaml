@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitlab-postgresql
+  namespace: devops-gitlab
+  labels:
+    name: gitlab-postgresql
+spec:
+  ports:
+    - name: gitlab-postgres
+      port: 5432
+      targetPort: gitlab-postgres
+  selector:
+    name: gitlab-postgresql

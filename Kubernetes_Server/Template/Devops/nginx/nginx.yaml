@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx-deployment
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-deployment
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx-deployment
+    spec:
+      containers:
+      - image: faguang/nginx:v1  # 在所有节点登录自己的 hub.docker.com 账户
+        name: nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+         - containerPort: 80
+        volumeMounts:
+         - name: nginx-html
+           mountPath: /usr/local/nginx/html
+         - name: nginx-logs
+           mountPath: /usr/local/nginx/logs
+         - name: nginx-vhosts
+           mountPath: /usr/local/nginx/conf/vhosts
+        resources:
+         limits:
+          cpu: "6"
+          memory: "6Gi"
+         requests:
+          cpu: "3"
+          memory: "3Gi"
+      volumes:
+       - name: nginx-logs
+         hostPath:
+          path: /opt/logs/nginx
+          type: DirectoryOrCreate
+       - name: nginx-vhosts
+         hostPath:
+          path: /opt/data/vhosts
+          type: DirectoryOrCreate
+       - name: nginx-html
+         hostPath:
+          path: /opt/data/comprehensive-pc/dist
+          type: DirectoryOrCreate
+status: {}

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    kubesphere.io/creator: huanggua
+    kubesphere.io/description: '这是申请动态pv的pvc持久卷声明 '
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  creationTimestamp: "2022-10-05T07:25:04Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  name: mysql-pvc
+  namespace: wangwang
+  resourceVersion: "229266"
+  uid: 00df8dbc-df92-4719-b8ea-1f44c96d2d17
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-storage
+  volumeMode: Filesystem
+  volumeName: pvc-00df8dbc-df92-4719-b8ea-1f44c96d2d17
+status:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  phase: Bound

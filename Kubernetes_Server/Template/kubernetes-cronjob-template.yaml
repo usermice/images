@@ -1,0 +1,28 @@
+apiVersion: batch/v1  	# 版本号
+kind: CronJob  	# 类型
+metadata:  	# 元数据
+  name: cronjob-template  	# 名称
+  namespace: default  	# 命名空间
+  labels:
+    controller: cronjob
+spec:  	# 详情描述
+  concurrencyPolicy: Allow    # 并发执行策略，Allow：并发调度，
+  failedJobsHistoryLimit: 1   # 保留多少个失败的任务，默认为1
+  successfulJobsHistoryLimit: 3   # 保留多少个成功的任务，默认为3
+  # startingDeadlineSeconds: 30   # 间隔多长时间检测失败的任务并重新执行，时间不能小于：10
+  suspend: false    # 是否挂起任务，若为：true 则该任务不执行
+  schedule: "*/1 * * * * "    # cron格式的作业调度运行时间点，用于控制任务任务时间执行
+  jobTemplate:  	# job控制器模板，用于为cronjob控制器生成job对象，下面其实就是job的定义
+    metadata: {}
+    spec:
+      completions: 1  	# 指定Job需要成功运行Pod的总次数，默认为1
+      parallelism: 1  	# 指定Job在任一时刻应该并发运行Pod的数量，默认为1
+      activeDeadlineSeconds: 30  	# 指定Job可以运行的时间期限，超过时间还没结束，系统将会尝试进行终止
+      backoffLimit: 6  	# 指定Job失败后进行重试的次数，默认为6
+      template:  	# 模板，当副本数量不足时，会根据下面的模板创建Pod模板
+        spec:
+          restartPolicy: Never  	# 重启策略只能设置为Never或OnFailure
+          containers:
+          - name: container-name
+            image: busybox:1.30
+            command: [ "/bin/sh","-c","for i in 9 8 7 6 5 4 3 2 1;do echo $i;sleep 20;done" ]

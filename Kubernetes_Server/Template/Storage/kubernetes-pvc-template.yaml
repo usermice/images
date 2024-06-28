@@ -1,0 +1,75 @@
+##########   定义Redis的PVC申请书，用于申请 Redis的PV   ##########
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc-template
+  namespace: default
+  labels:
+    name: redis-pvc-template
+spec:
+  volumeMode: Filesystem  	# 文件系统也需要与 PV相同才能使用
+  accessModes:  	# 访问模式
+  - ReadWriteMany  	# 权限需要与对应的PV 相同，才可以使用，Read：读、Write：写、Once：单节点、Many：代表多节点，Only：只读只写
+  storageClassName: nfs         # 需要与PV名字相同，Block:代表块存储、Filesystem:代表文件系统、nfs
+  resources:    # 请求空间
+    requests:
+      storage: 5Gi      # 对PV申请 5G 的存储空间
+
+---
+##########   定义Nginx的PVC申请书，用于申请 Redis的PV   ##########
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-pvc-template
+  namespace: default
+  labels:
+    name: nginx-pvc-template
+spec:
+  volumeMode: Filesystem
+  accessModes:          # 访问模式
+  - ReadWriteMany       # Read:代表可读、Write:代表写、Many:代表多节点
+  storageClassName: nfs         # 存储类型 ，Block:代表块存储、Filesystem:代表文件系统、nfs
+  resources:    # 请求空间
+    requests:
+      storage: 5Gi      # 对PV申请 5G 的存储空间
+
+---
+##########      创建 Deployment 访问 PVC 类型存储   ##########
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-pod-pvc-template
+  namespace: default
+  labels:
+    name: redis-pod-pvc-template
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
+  strategy:
+    rollingUpdate:      # 当type为RollingUpdate的时候生效，用于为rollingUpdate设置参数
+      maxUnavailable: 30%       # 用来指定在升级过程中不可用的Pod的最大数量，默认为25%。
+      maxSurge: 30%     # 用来指定在升级过程中可以超过期望的Pod的最大数量，默认为25%
+    type: RollingUpdate         # 更新策略、支持 Recreate, RollingUpdate。默认RollingUpdate
+  selector:     # 选择器，通过它指定该控制器管理哪些pod 
+    matchLabels:        # Labels匹配规则，matchExpressions：Expressions匹配规则 
+      name: redis-pvc-template
+  template:     # 模板，当副本数量不足时，会根据下面的模板创建pod副本 
+    metadata:
+      labels:   # Pod 的标签
+        name: redis-pvc-template
+    spec:
+      #  nodeSelector:
+      #    kubernetes.io/hostname: kube-01     # 指定节点
+      containers:
+      - name: reids
+        image: redis:6.2.7
+        command: ["/bin/sh","-c","while true;do echo pod1 >> /root/out.txt; sleep 10; done;"]
+        volumeMounts:
+        - name: redis-data        # 必须与volume定义的名称相同
+          mountPath: /opt/redis/conf        # 容器内路径
+      volumes:
+      - name: redis-data    # 自定义名称
+        persistentVolumeClaim:      # 关联 PVC
+          claimName: redis-pvc-template     # 关联 PVC，必须和定义PVC名称相同且，必须和当前pod在同一个命名空间
+          readOnly: false   # 是否只读，默认false

@@ -1,0 +1,47 @@
+##########   配置 Deployment 引用 ConfigMap 创建的文件   ##########
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-comfigmap-template
+  namespace: default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  selector: 
+   matchLabels:
+     name: nginx-cm-template
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: nginx-cm-template
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17.1
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+        - name: nginx-config    # 引用定义的 vulumes 名称
+          mountPath: '/etc/nginx/nginx.conf'    # 文件全路径
+          subPath: etc/nginx/nginx.conf   # 只覆盖必要文件，如果缺少此配置，将清空原有的所有文件和目录，不需要最前面的：/
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: nginx-config    # 定义 volumes 的名称
+        configMap: # 类型为configMap的存储卷，挂载预定义的configMap对象到容器内部
+          name: nginx-conf-cm-template      # ConfigMap生成的 Pod 名称，使用名称关联
+          items:   # 将configMap中的Key进行映射，如果不指定，默认会将configMap中所有Key全部转为一个个同名文档
+          - key: nginx.conf    # configMap中的Key
+            path: etc/nginx/nginx.conf   # 将该Key的值转为文件，最前面不需要：/

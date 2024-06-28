@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: gitlab-redis
+ namespace: devops-gitlab
+ labels:
+  name: gitlab-redis
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     name: gitlab-redis
+ template:
+   metadata:
+     name: gitlab-redis
+     labels:
+       name: gitlab-redis
+   spec:
+     containers:
+       - name: gitlab-redis
+         image: sameersbn/redis
+         imagePullPolicy: IfNotPresent
+         ports:
+           - name: gitlab-redis
+             containerPort: 6379
+         volumeMounts:
+           - mountPath: /var/lib/redis
+             name: gitlab-redis
+         livenessProbe:
+           exec:
+             command:
+             - redis-cli
+             - ping
+           initialDelaySeconds: 30
+           timeoutSeconds: 5
+         readinessProbe:
+           exec:
+             command:
+             - redis-cli
+             - ping
+           initialDelaySeconds: 5
+           timeoutSeconds: 1
+     volumes:
+     - name: gitlab-redis
+       nfs:
+         server: 192.168.94.110
+         path: /opt/data/redis
+         readOnly: false

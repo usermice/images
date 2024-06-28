@@ -1,0 +1,19 @@
+apiVersion: v1          # 版本
+kind: Service   # 类型
+metadata:       # 元数据
+  name: service-template        # Service 名字
+  namespace: default    # 命名空间
+  labels:
+    name: nginx  	# Service 自己本身的标签
+spec:
+  selector:     # 标签选择器，用于确定当前Service代理那些Pod
+    name: nginx-deploymen  	# 所有匹配到这些标签的Pod 都可以进行访问
+  type: NodePort        # 指定Service的类型访问方式、ClusterIP、NodePort、ExternalName，NodePort支持集群外部访问，启用ingress设置：ClusterIP
+  externalName: www.baidu.com   # 改成IP地址也可以,只有type类型为：ExternalName，域名配置才生效
+  clusterIP: 10.64.0.47        # 定service IP，不指定就随机生成，启用ingress设置为：None
+  sessionAffinity: None      # 分发策略、session亲和性，支持ClientIP、None两个选项，默认值为None
+  ports:        # 端口映射信息
+  - port: 80          # Service 端口，在使用内网IP访问时使用
+    protocol: TCP       # 协议
+    targetPort : 80     # 目标Pod端口，例如：deployment、statefulset等，Nginx：80，Tomcat：8080
+    nodePort: 30002     # 绑定到node主机上的端口(端口使用范围：30000~32767)，如果不指定，会默认分配，启用ingress删除此行

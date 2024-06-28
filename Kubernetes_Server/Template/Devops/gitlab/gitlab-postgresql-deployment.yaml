@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitlab-postgresql
+  namespace: devops-gitlab
+  labels:
+    name: gitlab-postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: gitlab-postgresql
+  template:
+    metadata:
+      name: gitlab-postgresql
+      labels:
+        name: gitlab-postgresql
+    spec:
+      containers:
+      - name: gitlab-postgresql
+        image: sameersbn/postgresql:10
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DB_USER
+          value: gitlab
+        - name: DB_PASS
+          value: passw0rd
+        - name: DB_NAME
+          value: gitlab_production
+        - name: DB_EXTENSION
+          value: pg_trgm
+        ports:
+        - name: gitlab-postgres
+          containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql
+          name: gitlab-postgresql
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -h
+            - localhost
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -h
+            - localhost
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+      volumes:
+      - name: gitlab-postgresql
+        nfs:
+          server: 192.168.94.110
+          path: /opt/data/postgresql
+          readOnly: false

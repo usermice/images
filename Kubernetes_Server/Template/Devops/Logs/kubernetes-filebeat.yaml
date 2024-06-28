@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: kube-logs-elk
+  labels:
+    name: filebeat
+data:
+  filebeat.yaml: |-
+    filebeat.inputs:
+    - type: container
+      enable: true
+      paths:
+      - /var/log/containers/*.log   # 这里是 filebeat 采集挂载到 Pods中的目录
+      processors:
+      - add_kubernetes_metadata:    # 添加到 K8S 的字段，用于后续的数据清晰
+          host: ${NODE_NAME}
+          matchers:
+          - logs_path:
+              logs_path: "/var/log/containers/"
+    # output.kafka: # 如果日志量较大，es 中的日志有延迟，可以选择在 filebeat 和logstash 中间加入kafaka
+    #   hosts: ["kafka-logs-01:9092", "kafka-logs-02:9092", "kafka-logs-03:9092"]
+    #   topic: 'topic-test-logs'
+    #   version: 2.0.0
+    output.logstash:    # 因为还需要部署 logstash 进行数据的清洗，因此 filebeat 是把数据推送到 logstash 中
+      hosts: ["logstash:5044"]
+      enabled: true
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+  namespace: kube-logs-elk
+  labels:
+    name: filebeat
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat
+  labels:
+    name: filebeat
+rules:
+- apiGroups: [""]   # "" 
+  resources:
+  - namespace
+  - pods
+  verbs: ["get", "watch", "list"]
+
+---
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat
+subjects:
+- kind: ServiceAccount
+  name: filebeat
+  namespace: kube-logs-elk
+roleRef:
+  kind: ClusterRole
+  name: filebeat
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: kube-logs-elk
+  labels:
+    name: filebeat
+spec:
+  selector:
+    matchLabels:
+      name: filebeat
+  template:
+    metadata:
+      labels:
+        name: filebeat
+    spec:
+      serviceAccountName: filebeat
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: filebeat
+        image: docker.io/kubeimages/filebeat:7.9.3    # 该镜像支持 arm64 和 amd64两种架构
+        args: [
+          "-c", "/etc/filebeat.yaml",
+          "-e", "-httpprof", "0.0.0.0:6060"
+        ]
+        # ports:
+        # - containerPort: 6060
+        #   hostPort: 6068
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: ELASTICSEARCH_HOST
+          value: elasticsearch-logs
+        - name: ELASTICSEARCH_PORT
+          value: "9200"
+        securityContext:
+          runAsUser: 0
+          # privileged: true
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 300m
+            memory: 256Mi
+        volumeMounts:
+        - name: config    # 挂载 filebeat 的配置文件
+          mountPath: /etc/filebeat.yaml
+          readOnly: true
+          subPath: filebeat.yaml
+        - name: data    # 持久卷挂载 filebeat 数据到宿主机上
+          mountPath: /usr/share/filebeat/data
+        - name: varlibdockercontainers    # 这里主要是把宿主机上的源日志目录挂载到 filebeat 容器中，如果没有修改 docker 或 containerd 的 runtime 进行了标准日志落盘路径，可以把 mountPath 改为默认路径：/var/lib
+          mountPath: /var/lib
+          readOnly: true
+        - name: varlog    # 这里主要是把宿主机上的 /var/log/pods 和 /var/log/containers 的软连接挂载到 filebeat 容器中
+          mountPath: /var/log/
+          readOnly: true
+        - name: timezone
+          mountPath: /etc/localtime
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 0600
+          name: filebeat-config
+      - name: varlibdockercontainers
+        hostPath:   # 如果没有修改 docker 或 containerd 的 runtime 进行了标准的日志落盘路径，可以把path 修改为默认路径： /var/lib
+         path: /var/lib
+      - name: varlog
+        hostPath:
+          path: /var/log/
+      - name: inputs
+        configMap:
+          defaultMode: 0600
+          name: filebeat-inputs
+      - name: data
+        hostPath:
+          path: /data/filebeat-data
+          type: DirectoryOrCreate
+      - name: timezone
+        hostPath:
+          path: /etc/localtime
+      tolerations:    # 加入容忍能够调度套每一个节点
+      - effect: NoExecute
+        key: dedicated
+        operator: Equal
+        value: gpu
+      - effect: NoSchedule
+        operator: Exists

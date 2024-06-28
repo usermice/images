@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zabbix-web
+  namespace: zabbix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zabbix-web
+  template:
+    metadata:
+      labels:
+        app: zabbix-web
+    spec:
+      containers:
+      - name: zabbix-web
+        image: zabbix/zabbix-web-nginx-mysql:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DB_SERVER_HOST
+          value: zabbix-mysql-endpoints
+        - name: MYSQL_DATABASE
+          value: zabbix
+        - name: MYSQL_USER
+          value: zabbix
+        - name: MYSQL_PASSWORD
+          value: zabbix
+        - name: MYSQL_ROOT_PASSWORD
+          value: zabbix
+        - name: ZBX_SERVER_HOST
+          value: 'zabbix-server'
+        - name: PHP_TZ
+          value: "Asia/Shanghai"
+        ports:
+        - containerPort: 8080
+          name: web
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 200m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi

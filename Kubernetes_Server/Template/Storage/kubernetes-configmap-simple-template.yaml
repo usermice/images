@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-template    # ConfigMap
+  namespace: default
+data:   # <map[string]string>
+  info:
+    username:admin
+    password:123456
+
+##########   挂载数据方式   ##########
+data:
+  stream.conf: |
+    stream.conf {
+      server {
+        listen 1550;
+        proxy_pass  192.168.3.125:16303;
+      }
+    }
+##########   挂载数据方式   ##########
+data:
+  listen-port: "8080"
+  server-name: www.erge.com
+
+  default-vhost: |  	# 此内容传给 Pod 中 items: 下 path: 路径中
+    server {
+      listen 8080 default;
+      location / {
+        return 200 "default-vhost!\r\n";
+      }
+    }
+
+  blog-vhosts: |
+    server {
+      listen 8080;
+      server_name blog.erge.com;
+      location / {
+        return 200 "blog-vhosts!\r\n";
+      }
+    }
+
+---
+##########   配置env引用方式 pod-configmap   ##########
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-pod
+  namespace: default
+  labels:
+    tier: configmap
+    role: slb
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.17.1
+    volumeMounts:
+    - mountPath: /configmap/config
+      name: config
+    env:
+    - name: LISTEN_PORT
+      valueFrom:
+        configMapKeyRef:
+          name: slb-vhosts-config
+          key: listen-port
+    - name: SERVER_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: slb-vhosts-config
+          key: server-name
+  volumes:
+  - name: config
+    configMap: # 类型为configMap的存储卷，挂载预定义的configMap对象到容器内部
+      name: configmap-template
+     # items:  	# 将configMap中的Key进行映射，如果不指定，默认会将configMap中所有Key全部转为一个个同名文档
+     # - key: string  	# configMap中的Key
+     #   path: string  	# 将该Key的值转为文件
+
+---
+##########   配置volume引用方式 pod-configmap   ########## 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-configmap
+  namespace: default
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.17.1
+    volumeMounts:
+    - mountPath: /configmap/config  	# 没有则会自动创建,目录下有文件则会覆盖掉
+      name: nginx-config
+  volumes:
+  - name: nginx-config  	# 此名称和 volumeMounts定义name名称一样
+    configMap:  	# 类型为configMap的存储卷，挂载预定义的configMap对象到容器内部
+      name: configmap  	# 配置为 configMap 容器的名称
+      defaultMode: integer  	 # 挂载到Pod中后，文件权限，如0444
+    items:
+    - key: default-vhost  	# configMap中data下的key
+      path: default.conf  	# 挂载路径，获取Configmap中data关键字下 定义配置文件名传给 volumeMounts 下的mountPath中
+      mode: integer  	# 文件权限
+    - key: blog-vhosts
+      path: blog.conf
+    optional: true  	# 当key不存在时是否报错，默认true

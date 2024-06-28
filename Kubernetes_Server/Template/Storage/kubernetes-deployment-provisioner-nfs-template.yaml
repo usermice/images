@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  namespace: default
+  labels:
+    app: nfs-client-provisioner
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate  	# Recreate:不滚动更新，
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      hostNetwork: true
+      serviceAccountName: nfs-client-provisioner  	# 关联：nfs-client-provisioner 账号授与账户权限
+      containers:
+      - name: nfs-client-provisioner
+        image: registry.cn-beijing.aliyuncs.com/pylixm/nfs-subdir-external-provisioner:v4.0.0
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        volumeMounts:
+        - name: nfs-client-root
+          mountPath: /persistentvolumes
+        env:
+        - name: PROVISIONER_NAME
+          value: fuseim.pri/ifs   # 必须和StorageClass的外部制备器提供者名字相同
+        - name: NFS_SERVER
+          value: 192.168.186.110  	# 指定自己nfs服务器地址
+        - name: NFS_PATH  
+          value: /opt/data/redis  	# nfs服务器共享的目录
+      volumes:
+      - name: nfs-client-root
+        nfs:
+          server: 192.168.186.110
+          path: /opt/data/redis

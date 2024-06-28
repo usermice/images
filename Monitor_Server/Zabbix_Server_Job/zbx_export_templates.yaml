@@ -1,0 +1,46 @@
+zabbix_export:
+  version: '6.0'
+  date: '2023-11-06T09:51:08Z'
+  groups:
+    - uuid: 19a3cc9b3e2546329bfaee3907bd0aa9
+      name: Port_Status
+  templates:
+    - uuid: 3d33abf36e534a8691afe0529f6eb3e1
+      template: Port_Status
+      name: Port_Status
+      groups:
+        - name: Port_Status
+      items:
+        - uuid: 48cb91fe349044f8825762cc8db30592
+          name: Game_Port_Status
+          key: 'net.tcp.listen[7001]'
+          delay: '0;3s/1-7,00:00-24:00'
+          triggers:
+            - uuid: e7d1d885056a4afd8947717a5571c0bf
+              expression: 'last(/Port_Status/net.tcp.listen[7001])<>1'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Port_Status/net.tcp.listen[7001])=1'
+              name: Game_Port_Status
+              priority: DISASTER
+        - uuid: 1606a862d03d4c6b9001de101681476c
+          name: Redenvelope_Port_Status
+          key: 'net.tcp.listen[7007]'
+          delay: '0;3/1-7,00:00-24:00'
+          triggers:
+            - uuid: 5fa802f24d1d441c96b184d15bdbe4ae
+              expression: 'last(/Port_Status/net.tcp.listen[7007])<>1'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Port_Status/net.tcp.listen[7007])=1'
+              name: Redenvelope_Port_Status
+              priority: DISASTER
+        - uuid: 5e76db293f564e0c889afcdc6e01b0d8
+          name: Back_Port_Status
+          key: 'net.tcp.listen[8009]'
+          delay: '0;3s/1-7,00:00-24:00'
+          triggers:
+            - uuid: de2d190070c7484bab916c7c0226864d
+              expression: 'last(/Port_Status/net.tcp.listen[8009])<>1'
+              recovery_mode: RECOVERY_EXPRESSION
+              recovery_expression: 'last(/Port_Status/net.tcp.listen[8009])=1'
+              name: Back_Port_Status
+              priority: DISASTER

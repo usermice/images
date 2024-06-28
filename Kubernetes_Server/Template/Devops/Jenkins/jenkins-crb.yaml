@@ -1,0 +1,15 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: jenkins-admin
+  labels:
+    name: jenkins
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-admin
+    namespace: jenkins
+roleRef:
+  kind: ClusterRole
+  # cluster-admin 是 k8s 集群中默认的管理员角色
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-http-gitlab
+  namespace: default
+spec:
+  ingressClassName: nginx       # Ingree类型：Nginx、Contour、Haproxy、Traefik
+  rules:
+  - host: nginx.erge.com        # 定义域名使外网可以使用浏览器访问
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service         # 定义Service Pod名称，和Service进行关联
+            port:
+              number: 80        # 定义Server Pod端口为：ports: - port: 8080，和Service进行关
+  - host: m.53up.com        # 定义域名使外网可以使用浏览器访问
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-53up         # 定义Service Pod名称，和Service进行关联
+            port:
+              number: 80        # 定义Server Pod端口为：ports: - port: 8080，和Service进行关
